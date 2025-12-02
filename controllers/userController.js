@@ -1,5 +1,5 @@
-// server/controllers/userController.js
 const userService = require("../services/userService");
+const pool = require("../db"); // נשתמש בזה כדי לשלוף את המשתמש מה־DB
 
 // 🧠 POST /api/users/signup
 async function signup(req, res) {
@@ -27,12 +27,26 @@ async function login(req, res) {
         const { email, password } = req.body;
 
         const token = await userService.authenticateUser(email, password);
-        if (!token)
+        if (!token) {
             return res
                 .status(401)
                 .json({ success: false, error: "Invalid email or password" });
+        }
 
-        res.json({ success: true, token });
+        // ✅ נשלוף גם את פרטי המשתמש מה־DB לפי האימייל
+        const result = await pool.query(
+            "SELECT id, first_name, last_name, username, email FROM users WHERE email = $1",
+            [email]
+        );
+
+        const user = result.rows[0];
+
+        // ✅ נחזיר גם את ה־token וגם את פרטי המשתמש
+        res.json({
+            success: true,
+            token,
+            user,
+        });
     } catch (error) {
         console.error("❌ Error in login:", error.message);
         res.status(500).json({ success: false, error: error.message });
