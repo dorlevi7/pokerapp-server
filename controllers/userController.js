@@ -1,5 +1,5 @@
 const userService = require("../services/userService");
-const pool = require("../db"); // נשתמש בזה כדי לשלוף את המשתמש מה־DB
+const pool = require("../db");
 
 // 🧠 POST /api/users/signup
 async function signup(req, res) {
@@ -33,7 +33,7 @@ async function login(req, res) {
                 .json({ success: false, error: "Invalid email or password" });
         }
 
-        // ✅ נשלוף גם את פרטי המשתמש מה־DB לפי האימייל
+        // ✅ Also fetch the user details from the DB by email
         const result = await pool.query(
             "SELECT id, first_name, last_name, username, email FROM users WHERE email = $1",
             [email]
@@ -41,7 +41,7 @@ async function login(req, res) {
 
         const user = result.rows[0];
 
-        // ✅ נחזיר גם את ה־token וגם את פרטי המשתמש
+        // ✅ Return both the token and the user details
         res.json({
             success: true,
             token,
