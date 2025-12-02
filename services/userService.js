@@ -22,14 +22,21 @@ async function createUser({ firstName, lastName, username, email, password }) {
 
         // שמירה לטבלה
         const query = `
-      INSERT INTO users (first_name, last_name, username, email, password_hash)
-      VALUES ($1, $2, $3, $4, $5)
-      RETURNING id, first_name, last_name, username, email, created_at;
-    `;
+            INSERT INTO users (first_name, last_name, username, email, password_hash)
+            VALUES ($1, $2, $3, $4, $5)
+            RETURNING id, first_name, last_name, username, email, created_at;
+        `;
         const values = [firstName, lastName, username, email, hashedPassword];
         const result = await pool.query(query, values);
 
-        return result.rows[0];
+        const user = result.rows[0];
+
+        // ✅ המרה לתאריך קריא בעברית (dd/mm/yyyy)
+        if (user.created_at) {
+            user.created_at = new Date(user.created_at).toLocaleDateString("he-IL");
+        }
+
+        return user;
     } catch (error) {
         console.error("❌ Error creating user:", error);
         throw error;
@@ -67,7 +74,16 @@ async function getUserById(userId) {
             "SELECT id, first_name, last_name, username, email, created_at FROM users WHERE id = $1",
             [userId]
         );
-        return result.rows[0];
+
+        const user = result.rows[0];
+        if (!user) return null;
+
+        // ✅ המרה לתאריך קריא בעברית (dd/mm/yyyy)
+        if (user.created_at) {
+            user.created_at = new Date(user.created_at).toLocaleDateString("he-IL");
+        }
+
+        return user;
     } catch (error) {
         console.error("❌ Error getting user by ID:", error);
         throw error;
