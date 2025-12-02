@@ -1,31 +1,33 @@
+// server/server.js
 const express = require("express");
 const cors = require("cors");
 const dotenv = require("dotenv");
-const clickRoutes = require("./routes/clickRoutes");
+const userRoutes = require("./routes/userRoutes");
 
 dotenv.config();
 
 const app = express();
 
-// ✅ Middleware — allow all origins (important for ngrok)
+// ✅ Middleware — allow all origins
 app.use(
     cors({
-        origin: "*", // Allow requests from anywhere (mobile via ngrok)
+        origin: "*",
         methods: ["GET", "POST", "OPTIONS"],
-        allowedHeaders: ["Content-Type"],
+        allowedHeaders: ["Content-Type", "Authorization"],
     })
 );
 
 app.use(express.json());
 
 // ✅ Routes
-app.use("/api/clicks", clickRoutes);
+app.use("/api/users", userRoutes);
 
-// ✅ Root test
+// ✅ Root route (test)
 app.get("/", (req, res) => {
-    res.send("PokerApp Server is running");
+    res.send("PokerApp User API is running 🚀");
 });
 
+// ✅ Start server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, "0.0.0.0", () => {
     console.log(`✅ Server running on port ${PORT}`);
