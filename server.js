@@ -2,7 +2,9 @@
 const express = require("express");
 const cors = require("cors");
 const dotenv = require("dotenv");
+
 const userRoutes = require("./routes/userRoutes");
+const groupRoutes = require("./routes/groupRoutes"); // ⭐ NEW
 
 dotenv.config();
 
@@ -21,10 +23,11 @@ app.use(express.json());
 
 // ✅ Routes
 app.use("/api/users", userRoutes);
+app.use("/api/groups", groupRoutes); // ⭐ NEW
 
 // ✅ Root route (test)
 app.get("/", (req, res) => {
-    res.send("PokerApp User API is running 🚀");
+    res.send("PokerApp API is running 🚀");
 });
 
 // ✅ Start server
