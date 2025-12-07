@@ -33,7 +33,7 @@ async function login(req, res) {
                 .json({ success: false, error: "Invalid email or password" });
         }
 
-        // ✅ Also fetch the user details from the DB by email
+        // Fetch user details
         const result = await pool.query(
             "SELECT id, first_name, last_name, username, email FROM users WHERE email = $1",
             [email]
@@ -41,7 +41,6 @@ async function login(req, res) {
 
         const user = result.rows[0];
 
-        // ✅ Return both the token and the user details
         res.json({
             success: true,
             token,
@@ -63,4 +62,31 @@ async function getProfile(req, res) {
     }
 }
 
-module.exports = { signup, login, getProfile };
+// 🔍 NEW: Check if user exists (email OR username)
+async function checkUserExists(req, res) {
+    try {
+        const { query } = req.query;
+
+        if (!query) {
+            return res.status(400).json({ success: false, error: "Query is required" });
+        }
+
+        const user = await userService.findUserByEmailOrUsername(query);
+
+        if (!user) {
+            return res.json({ success: true, exists: false });
+        }
+
+        res.json({ success: true, exists: true, user });
+    } catch (error) {
+        console.error("❌ Error checking user existence:", error.message);
+        res.status(500).json({ success: false, error: "Server error" });
+    }
+}
+
+module.exports = {
+    signup,
+    login,
+    getProfile,
+    checkUserExists  // <-- MUST BE EXPORTED
+};

@@ -74,8 +74,26 @@ async function getUserById(userId) {
     }
 }
 
+async function findUserByEmailOrUsername(query) {
+    try {
+        const result = await pool.query(
+            `SELECT id, first_name, last_name, username, email
+             FROM users
+             WHERE email = $1 OR username = $1`,
+            [query]
+        );
+
+        return result.rows[0] || null;
+    } catch (error) {
+        console.error("❌ Error checking if user exists:", error);
+        throw error;
+    }
+}
+
+
 module.exports = {
     createUser,
     authenticateUser,
     getUserById,
+    findUserByEmailOrUsername,
 };
