@@ -1,3 +1,4 @@
+// server/services/groupService.js
 const pool = require("../db");
 
 // 🟢 Create a new group
@@ -7,19 +8,19 @@ async function createGroup({ name, ownerId, memberIds = [] }) {
     try {
         await client.query("BEGIN");
 
-        // 1️⃣ Create group record
+        // 1️⃣ Create group
         const groupResult = await client.query(
             `
             INSERT INTO groups (name, owner_id)
             VALUES ($1, $2)
             RETURNING id, name, owner_id, created_at
             `,
-            [name, ownerId]
+            [name, ownerId] // ownerId may be NULL (allowed)
         );
 
         const group = groupResult.rows[0];
 
-        // 2️⃣ Insert members into group_members table
+        // 2️⃣ Insert group members
         if (Array.isArray(memberIds) && memberIds.length > 0) {
             const insertValues = memberIds
                 .map((id, idx) => `($1, $${idx + 2})`)
@@ -46,9 +47,12 @@ async function createGroup({ name, ownerId, memberIds = [] }) {
     }
 }
 
-// 📄 Get all groups a user belongs to
+// 📄 Get all groups for a given user
 async function getGroupsByUser(userId) {
     try {
+        // If no user ID (because JWT disabled), return empty array
+        if (!userId) return [];
+
         const result = await pool.query(
             `
             SELECT DISTINCT g.id, g.name, g.owner_id, g.created_at
@@ -67,7 +71,7 @@ async function getGroupsByUser(userId) {
     }
 }
 
-// 👥 Get all members of a specific group
+// 👥 Get members of a specific group
 async function getGroupMembers(groupId) {
     try {
         const result = await pool.query(
