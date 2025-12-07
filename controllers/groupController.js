@@ -1,31 +1,26 @@
 const groupService = require("../services/groupService");
-const pool = require("../db");
 
 // 🟢 POST /api/groups/create
-// Create a new group
 async function createGroup(req, res) {
     try {
-        const { name, members } = req.body;
-        const ownerId = req.user.id; // Will work once JWT middleware is added
+        const { name, memberIds } = req.body;
+        const ownerId = req.user?.id || null; // JWT later
 
-        if (!name || !members || !Array.isArray(members)) {
+        if (!name || !Array.isArray(memberIds)) {
             return res
                 .status(400)
-                .json({ success: false, error: "Group name and members are required" });
+                .json({ success: false, error: "Group name and memberIds are required" });
         }
 
-        // Create the group
-        const group = await groupService.createGroup({ name, ownerId });
-
-        // Add group members
-        await groupService.addMembers(group.id, members);
+        const group = await groupService.createGroup({
+            name,
+            ownerId,
+            memberIds, // 👈 חובה!!
+        });
 
         res.status(201).json({
             success: true,
-            data: {
-                group,
-                members,
-            },
+            data: group,
         });
     } catch (error) {
         console.error("❌ Error creating group:", error);
@@ -34,10 +29,9 @@ async function createGroup(req, res) {
 }
 
 // 📄 GET /api/groups/my-groups
-// Get all groups that the user owns or is a member of
 async function getUserGroups(req, res) {
     try {
-        const userId = req.user.id;
+        const userId = req.user?.id || null;
 
         const groups = await groupService.getGroupsByUser(userId);
 
@@ -56,7 +50,7 @@ async function getGroupMembers(req, res) {
     try {
         const { groupId } = req.params;
 
-        const members = await groupService.getMembers(groupId);
+        const members = await groupService.getGroupMembers(groupId);
 
         res.json({
             success: true,

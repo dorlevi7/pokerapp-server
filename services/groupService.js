@@ -1,8 +1,7 @@
-// server/services/groupService.js
 const pool = require("../db");
 
 // 🟢 Create a new group
-async function createGroup({ name, ownerId, memberIds }) {
+async function createGroup({ name, ownerId, memberIds = [] }) {
     const client = await pool.connect();
 
     try {
@@ -21,7 +20,7 @@ async function createGroup({ name, ownerId, memberIds }) {
         const group = groupResult.rows[0];
 
         // 2️⃣ Insert members into group_members table
-        if (memberIds.length > 0) {
+        if (Array.isArray(memberIds) && memberIds.length > 0) {
             const insertValues = memberIds
                 .map((id, idx) => `($1, $${idx + 2})`)
                 .join(", ");
@@ -48,14 +47,14 @@ async function createGroup({ name, ownerId, memberIds }) {
 }
 
 // 📄 Get all groups a user belongs to
-async function getGroupsForUser(userId) {
+async function getGroupsByUser(userId) {
     try {
         const result = await pool.query(
             `
-            SELECT g.id, g.name, g.owner_id, g.created_at
+            SELECT DISTINCT g.id, g.name, g.owner_id, g.created_at
             FROM groups g
-            JOIN group_members gm ON gm.group_id = g.id
-            WHERE gm.user_id = $1
+            LEFT JOIN group_members gm ON gm.group_id = g.id
+            WHERE gm.user_id = $1 OR g.owner_id = $1
             ORDER BY g.created_at DESC
             `,
             [userId]
@@ -91,6 +90,6 @@ async function getGroupMembers(groupId) {
 
 module.exports = {
     createGroup,
-    getGroupsForUser,
-    getGroupMembers
+    getGroupsByUser,
+    getGroupMembers,
 };

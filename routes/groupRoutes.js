@@ -1,5 +1,6 @@
-// server/routes/groupRoutes.js
 const express = require("express");
+const auth = require("../middleware/auth");
+
 const {
     createGroup,
     getUserGroups,
@@ -8,13 +9,13 @@ const {
 
 const router = express.Router();
 
-// 🟢 Create a new group
-router.post("/create", createGroup);
+// 🟢 Create a new group  (requires login)
+router.post("/create", auth, createGroup);
 
-// 📄 Get all groups of the logged-in user
-router.get("/my-groups", getUserGroups);
+// 📄 Get groups of logged-in user
+router.get("/my-groups", auth, getUserGroups);
 
 // 👥 Get members of a specific group
-router.get("/:groupId/members", getGroupMembers);
+router.get("/:groupId/members", auth, getGroupMembers);
 
 module.exports = router;
