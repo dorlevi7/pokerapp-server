@@ -4,16 +4,13 @@ const groupService = require("../services/groupService");
 // 🟢 POST /api/groups/create
 async function createGroup(req, res) {
     try {
-        const { name, memberIds } = req.body;
+        const { name, memberIds, ownerId } = req.body;   // 👈 ownerId מגיע מה-client
 
-        if (!name || !Array.isArray(memberIds)) {
+        if (!name || !Array.isArray(memberIds) || !ownerId) {
             return res
                 .status(400)
-                .json({ success: false, error: "Group name and memberIds are required" });
+                .json({ success: false, error: "name, ownerId and memberIds are required" });
         }
-
-        // 🟢 No JWT yet → ownerId = null
-        const ownerId = null;
 
         const group = await groupService.createGroup({
             name,
@@ -34,8 +31,14 @@ async function createGroup(req, res) {
 // 📄 GET /api/groups/my-groups
 async function getUserGroups(req, res) {
     try {
-        // 🟢 No JWT yet → no userId
-        const userId = null;
+        const { userId } = req.body; // 👈 זמני עד JWT
+
+        if (!userId) {
+            return res.status(400).json({
+                success: false,
+                error: "userId is required until JWT is implemented",
+            });
+        }
 
         const groups = await groupService.getGroupsForUser(userId);
 

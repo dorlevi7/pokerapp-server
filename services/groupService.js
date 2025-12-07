@@ -3,6 +3,10 @@ const pool = require("../db");
 
 // 🟢 Create a new group
 async function createGroup({ name, ownerId, memberIds = [] }) {
+    if (!ownerId) {
+        throw new Error("ownerId is required when creating a group");
+    }
+
     const client = await pool.connect();
 
     try {
@@ -15,12 +19,17 @@ async function createGroup({ name, ownerId, memberIds = [] }) {
             VALUES ($1, $2)
             RETURNING id, name, owner_id, created_at
             `,
-            [name, ownerId] // ownerId may be NULL (allowed)
+            [name, ownerId]
         );
 
         const group = groupResult.rows[0];
 
-        // 2️⃣ Insert group members
+        // 2️⃣ Ensure owner is in the members list
+        if (!memberIds.includes(ownerId)) {
+            memberIds.push(ownerId);
+        }
+
+        // 3️⃣ Insert group members
         if (Array.isArray(memberIds) && memberIds.length > 0) {
             const insertValues = memberIds
                 .map((id, idx) => `($1, $${idx + 2})`)
@@ -50,7 +59,6 @@ async function createGroup({ name, ownerId, memberIds = [] }) {
 // 📄 Get all groups for a given user
 async function getGroupsByUser(userId) {
     try {
-        // If no user ID (because JWT disabled), return empty array
         if (!userId) return [];
 
         const result = await pool.query(
