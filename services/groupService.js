@@ -1,4 +1,3 @@
-// server/services/groupService.js
 const pool = require("../db");
 
 // 🟢 Create a new group
@@ -103,5 +102,6 @@ async function getGroupMembers(groupId) {
 module.exports = {
     createGroup,
     getGroupsByUser,
+    getGroupsForUser: getGroupsByUser,  // ⭐ הפונקציה שה-controller מצפה לה
     getGroupMembers,
 };

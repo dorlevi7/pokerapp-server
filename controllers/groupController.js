@@ -4,12 +4,13 @@ const groupService = require("../services/groupService");
 // 🟢 POST /api/groups/create
 async function createGroup(req, res) {
     try {
-        const { name, memberIds, ownerId } = req.body;   // 👈 ownerId מגיע מה-client
+        const { name, memberIds, ownerId } = req.body;
 
         if (!name || !Array.isArray(memberIds) || !ownerId) {
-            return res
-                .status(400)
-                .json({ success: false, error: "name, ownerId and memberIds are required" });
+            return res.status(400).json({
+                success: false,
+                error: "name, ownerId and memberIds are required",
+            });
         }
 
         const group = await groupService.createGroup({
@@ -28,10 +29,10 @@ async function createGroup(req, res) {
     }
 }
 
-// 📄 GET /api/groups/my-groups
+// 📄 POST /api/groups/my-groups (TEMP)
 async function getUserGroups(req, res) {
     try {
-        const { userId } = req.body; // 👈 זמני עד JWT
+        const { userId } = req.body; // TEMP until JWT
 
         if (!userId) {
             return res.status(400).json({
@@ -40,7 +41,8 @@ async function getUserGroups(req, res) {
             });
         }
 
-        const groups = await groupService.getGroupsForUser(userId);
+        // ❗ השם הנכון של הפונקציה ב-service
+        const groups = await groupService.getGroupsByUser(userId);
 
         res.json({
             success: true,
