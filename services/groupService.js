@@ -62,9 +62,17 @@ async function getGroupsByUser(userId) {
 
         const result = await pool.query(
             `
-            SELECT DISTINCT g.id, g.name, g.owner_id, g.created_at
+            SELECT DISTINCT 
+                g.id, 
+                g.name,
+                g.owner_id,
+                u.username AS owner_username,
+                u.first_name AS owner_first_name,
+                u.last_name AS owner_last_name,
+                g.created_at
             FROM groups g
             LEFT JOIN group_members gm ON gm.group_id = g.id
+            LEFT JOIN users u ON u.id = g.owner_id   -- ⭐ מוסיף מידע על הבעלים
             WHERE gm.user_id = $1 OR g.owner_id = $1
             ORDER BY g.created_at DESC
             `,
