@@ -19,12 +19,7 @@ async function sendNotification({ senderId, receiverIds, title, message }) {
             .map((_, idx) => `($1, $2, $3, $${idx + 4})`)
             .join(", ");
 
-        const queryParams = [
-            senderId,
-            title || null,
-            message,
-            ...receiverIds
-        ];
+        const queryParams = [senderId, title || null, message, ...receiverIds];
 
         const result = await client.query(
             `
@@ -36,7 +31,6 @@ async function sendNotification({ senderId, receiverIds, title, message }) {
         );
 
         await client.query("COMMIT");
-
         return result.rows;
     } catch (error) {
         await client.query("ROLLBACK");
@@ -78,7 +72,7 @@ async function getUserNotifications(userId) {
     }
 }
 
-// 🟣 Mark a notification as read
+// 🟣 Mark a specific notification as read
 async function markAsRead(notificationId) {
     try {
         const result = await pool.query(
@@ -98,8 +92,29 @@ async function markAsRead(notificationId) {
     }
 }
 
+// 🟡 ⭐ NEW: Mark ALL notifications for user as read
+async function markAllAsRead(userId) {
+    try {
+        const result = await pool.query(
+            `
+            UPDATE notifications
+            SET is_read = TRUE
+            WHERE receiver_id = $1 AND is_read = FALSE
+            RETURNING id, receiver_id, is_read, created_at
+            `,
+            [userId]
+        );
+
+        return result.rows; // returns all updated notifications
+    } catch (error) {
+        console.error("❌ Error marking all notifications as read:", error);
+        throw error;
+    }
+}
+
 module.exports = {
     sendNotification,
     getUserNotifications,
     markAsRead,
+    markAllAsRead,   // ⭐ Export new function
 };
