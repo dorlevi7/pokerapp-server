@@ -62,7 +62,7 @@ async function getProfile(req, res) {
     }
 }
 
-// 🔍 NEW: Check if user exists (email OR username)
+// 🔍 Check if user exists (email OR username)
 async function checkUserExists(req, res) {
     try {
         const { query } = req.query;
@@ -84,9 +84,38 @@ async function checkUserExists(req, res) {
     }
 }
 
+async function updateUser(req, res) {
+    try {
+        const { id, firstName, lastName, username, email, password } = req.body;
+
+        if (!id) {
+            return res.status(400).json({
+                success: false,
+                error: "User ID is required for update",
+            });
+        }
+
+        const updatedUser = await userService.updateUser({
+            id,
+            firstName,
+            lastName,
+            username,
+            email,
+            password,
+        });
+
+        res.json({ success: true, data: updatedUser });
+
+    } catch (error) {
+        console.error("❌ Error updating user:", error.message);
+        res.status(500).json({ success: false, error: error.message });
+    }
+}
+
 module.exports = {
     signup,
     login,
     getProfile,
-    checkUserExists  // <-- MUST BE EXPORTED
+    checkUserExists,
+    updateUser,
 };

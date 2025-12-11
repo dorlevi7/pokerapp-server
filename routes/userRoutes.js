@@ -4,7 +4,8 @@ const {
     signup,
     login,
     getProfile,
-    checkUserExists
+    checkUserExists,
+    updateUser   // ⭐ NEW
 } = require("../controllers/userController");
 
 const router = express.Router();
@@ -20,5 +21,8 @@ router.get("/profile", getProfile);
 
 // 🔍 Check if user exists (email OR username)
 router.get("/exists", checkUserExists);
+
+// ✏️ NEW — Update user information
+router.put("/update", updateUser);
 
 module.exports = router;
