@@ -11,7 +11,7 @@ async function createGroup({ name, ownerId, memberIds = [] }) {
     try {
         await client.query("BEGIN");
 
-        // 1️⃣ Create group
+        // 1️⃣ Create group (only owner is auto-added)
         const groupResult = await client.query(
             `
             INSERT INTO groups (name, owner_id)
@@ -23,25 +23,16 @@ async function createGroup({ name, ownerId, memberIds = [] }) {
 
         const group = groupResult.rows[0];
 
-        // 2️⃣ Ensure owner is in the members list
-        if (!memberIds.includes(ownerId)) {
-            memberIds.push(ownerId);
-        }
+        // 2️⃣ Insert only the OWNER as member
+        await client.query(
+            `
+            INSERT INTO group_members (group_id, user_id)
+            VALUES ($1, $2)
+            `,
+            [group.id, ownerId]
+        );
 
-        // 3️⃣ Insert group members
-        if (Array.isArray(memberIds) && memberIds.length > 0) {
-            const insertValues = memberIds
-                .map((id, idx) => `($1, $${idx + 2})`)
-                .join(", ");
-
-            await client.query(
-                `
-                INSERT INTO group_members (group_id, user_id)
-                VALUES ${insertValues}
-                `,
-                [group.id, ...memberIds]
-            );
-        }
+        // ⛔️ No memberIds inserted — they must accept invitation first.
 
         await client.query("COMMIT");
 
@@ -72,7 +63,7 @@ async function getGroupsByUser(userId) {
                 g.created_at
             FROM groups g
             LEFT JOIN group_members gm ON gm.group_id = g.id
-            LEFT JOIN users u ON u.id = g.owner_id   -- ⭐ מוסיף מידע על הבעלים
+            LEFT JOIN users u ON u.id = g.owner_id
             WHERE gm.user_id = $1 OR g.owner_id = $1
             ORDER BY g.created_at DESC
             `,
@@ -107,9 +98,43 @@ async function getGroupMembers(groupId) {
     }
 }
 
+// 🟢 NEW: Add user to group after accepting invitation
+async function addUserToGroup(groupId, userId) {
+    try {
+        // 1️⃣ Check if already a member
+        const check = await pool.query(
+            `
+            SELECT 1 FROM group_members
+            WHERE group_id = $1 AND user_id = $2
+            `,
+            [groupId, userId]
+        );
+
+        if (check.rows.length > 0) {
+            return { alreadyMember: true };
+        }
+
+        // 2️⃣ Insert user into group
+        const result = await pool.query(
+            `
+            INSERT INTO group_members (group_id, user_id)
+            VALUES ($1, $2)
+            RETURNING group_id, user_id
+            `,
+            [groupId, userId]
+        );
+
+        return result.rows[0];
+    } catch (error) {
+        console.error("❌ Error adding user to group:", error);
+        throw error;
+    }
+}
+
 module.exports = {
     createGroup,
     getGroupsByUser,
-    getGroupsForUser: getGroupsByUser,  // ⭐ הפונקציה שה-controller מצפה לה
+    getGroupsForUser: getGroupsByUser,
     getGroupMembers,
+    addUserToGroup, // ⭐ ADDED
 };

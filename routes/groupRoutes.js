@@ -4,7 +4,8 @@ const express = require("express");
 const {
     createGroup,
     getUserGroups,
-    getGroupMembers
+    getGroupMembers,
+    joinGroup,          // ⭐ נוסיף עוד רגע בקונטרולר
 } = require("../controllers/groupController");
 
 const router = express.Router();
@@ -17,5 +18,8 @@ router.post("/my-groups", getUserGroups);
 
 // 👥 Get members of a specific group
 router.get("/:groupId/members", getGroupMembers);
+
+// 🟢 NEW: Player accepts invitation → joins the group
+router.post("/:groupId/join", joinGroup);   // ⭐ חדש
 
 module.exports = router;

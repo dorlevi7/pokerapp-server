@@ -1,7 +1,7 @@
 const pool = require("../db");
 
-// 🟢 Send notifications to multiple users
-async function sendNotification({ senderId, receiverIds, title, message }) {
+// 🟢 Send notifications to multiple users (supports meta JSON)
+async function sendNotification({ senderId, receiverIds, title, message, meta = {} }) {
     if (!senderId) {
         throw new Error("senderId is required");
     }
@@ -14,18 +14,19 @@ async function sendNotification({ senderId, receiverIds, title, message }) {
     try {
         await client.query("BEGIN");
 
-        // ⚙️ Create insert template
+        // Build VALUES template with meta as last parameter
         const insertValues = receiverIds
-            .map((_, idx) => `($1, $2, $3, $${idx + 4})`)
+            .map((_, idx) => `($1, $2, $3, $${idx + 4}, $${receiverIds.length + 4})`)
             .join(", ");
 
-        const queryParams = [senderId, title || null, message, ...receiverIds];
+        // params: senderId, title, message, receiverIds..., meta
+        const queryParams = [senderId, title || null, message, ...receiverIds, meta];
 
         const result = await client.query(
             `
-            INSERT INTO notifications (sender_id, title, message, receiver_id)
+            INSERT INTO notifications (sender_id, title, message, receiver_id, meta)
             VALUES ${insertValues}
-            RETURNING id, sender_id, receiver_id, title, message, is_read, created_at
+            RETURNING id, sender_id, receiver_id, title, message, meta, is_read, created_at
             `,
             queryParams
         );
@@ -41,7 +42,7 @@ async function sendNotification({ senderId, receiverIds, title, message }) {
     }
 }
 
-// 🔵 Get all notifications for a user (sorted newest → oldest)
+// 🔵 Get notifications for a user (now includes meta)
 async function getUserNotifications(userId) {
     try {
         const result = await pool.query(
@@ -55,6 +56,7 @@ async function getUserNotifications(userId) {
                 n.receiver_id,
                 n.title,
                 n.message,
+                n.meta,        -- ⭐ NEW
                 n.is_read,
                 n.created_at
             FROM notifications n
@@ -92,7 +94,7 @@ async function markAsRead(notificationId) {
     }
 }
 
-// 🟡 ⭐ NEW: Mark ALL notifications for user as read
+// 🟡 Mark ALL notifications for a user as read
 async function markAllAsRead(userId) {
     try {
         const result = await pool.query(
@@ -105,7 +107,7 @@ async function markAllAsRead(userId) {
             [userId]
         );
 
-        return result.rows; // returns all updated notifications
+        return result.rows;
     } catch (error) {
         console.error("❌ Error marking all notifications as read:", error);
         throw error;
@@ -116,5 +118,5 @@ module.exports = {
     sendNotification,
     getUserNotifications,
     markAsRead,
-    markAllAsRead,   // ⭐ Export new function
+    markAllAsRead,
 };

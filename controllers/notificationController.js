@@ -4,7 +4,7 @@ const notificationService = require("../services/notificationService");
 // 🟢 POST /api/notifications/send
 async function sendNotification(req, res) {
     try {
-        const { senderId, receiverIds, title, message } = req.body;
+        const { senderId, receiverIds, title, message, meta } = req.body;
 
         if (!senderId || !Array.isArray(receiverIds) || receiverIds.length === 0 || !message) {
             return res.status(400).json({
@@ -18,6 +18,7 @@ async function sendNotification(req, res) {
             receiverIds,
             title: title || null,
             message,
+            meta: meta || {},   // ⭐ pass meta to service
         });
 
         res.status(201).json({
@@ -86,5 +87,5 @@ module.exports = {
     sendNotification,
     getUserNotifications,
     markAsRead,
-    markAllAsRead, // ⭐ EXPORT NEW FUNCTION
+    markAllAsRead,
 };

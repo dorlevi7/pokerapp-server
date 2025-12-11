@@ -16,7 +16,7 @@ async function createGroup(req, res) {
         const group = await groupService.createGroup({
             name,
             ownerId,
-            memberIds,
+            memberIds, // invitations will use this, but members won't be auto-added
         });
 
         res.status(201).json({
@@ -32,7 +32,7 @@ async function createGroup(req, res) {
 // 📄 POST /api/groups/my-groups (TEMP)
 async function getUserGroups(req, res) {
     try {
-        const { userId } = req.body; // TEMP until JWT
+        const { userId } = req.body;
 
         if (!userId) {
             return res.status(400).json({
@@ -41,7 +41,6 @@ async function getUserGroups(req, res) {
             });
         }
 
-        // ❗ השם הנכון של הפונקציה ב-service
         const groups = await groupService.getGroupsByUser(userId);
 
         res.json({
@@ -71,8 +70,35 @@ async function getGroupMembers(req, res) {
     }
 }
 
+// 🟢 NEW: Player accepts invitation → joins the group
+async function joinGroup(req, res) {
+    try {
+        const { groupId } = req.params;
+        const { userId } = req.body;
+
+        if (!userId) {
+            return res.status(400).json({
+                success: false,
+                error: "userId is required",
+            });
+        }
+
+        const result = await groupService.addUserToGroup(groupId, userId);
+
+        res.json({
+            success: true,
+            message: "User added to group",
+            data: result,
+        });
+    } catch (error) {
+        console.error("❌ Error joining group:", error);
+        res.status(500).json({ success: false, error: "Server error" });
+    }
+}
+
 module.exports = {
     createGroup,
     getUserGroups,
     getGroupMembers,
+    joinGroup, // ⭐ ADDED
 };
