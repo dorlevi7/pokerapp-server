@@ -7,6 +7,8 @@ const userRoutes = require("./routes/userRoutes");
 const groupRoutes = require("./routes/groupRoutes");
 const notificationRoutes = require("./routes/notificationRoutes");
 
+const gameRoutes = require("./routes/gameRoutes");
+
 dotenv.config();
 
 const app = express();
@@ -26,6 +28,8 @@ app.use(express.json());
 app.use("/api/users", userRoutes);
 app.use("/api/groups", groupRoutes);
 app.use("/api/notifications", notificationRoutes);
+
+app.use("/api/games", gameRoutes);
 
 // 🟢 Root
 app.get("/", (req, res) => {
