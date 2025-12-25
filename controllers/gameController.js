@@ -202,6 +202,65 @@ async function getGameRebuyHistory(req, res) {
     }
 }
 
+/* ============================================================
+   🏁 POST /api/games/:gameId/finish
+   Save final results + close game
+============================================================ */
+async function finishGame(req, res) {
+    try {
+        const { gameId } = req.params;
+        const { results, durationSeconds } = req.body;
+
+        if (!Array.isArray(results) || results.length === 0) {
+            return res.status(400).json({
+                success: false,
+                error: "results array is required"
+            });
+        }
+
+        await gameService.finishGame({
+            gameId,
+            results,
+            durationSeconds
+        });
+
+        return res.json({
+            success: true,
+            message: "Game finished and results saved"
+        });
+
+    } catch (error) {
+        console.error("❌ Error finishing game:", error);
+        return res.status(500).json({
+            success: false,
+            error: error.message || "Server error finishing game"
+        });
+    }
+}
+
+/* ============================================================
+   📊 GET /api/games/:gameId/results
+   Get final game results
+============================================================ */
+async function getGameResults(req, res) {
+    try {
+        const { gameId } = req.params;
+
+        const results = await gameService.getGameResults(gameId);
+
+        return res.json({
+            success: true,
+            data: results
+        });
+    } catch (error) {
+        console.error("❌ Error fetching game results:", error);
+        return res.status(500).json({
+            success: false,
+            error: "Server error fetching game results"
+        });
+    }
+}
+
 module.exports = {
     createGame,
     getGameSettings,
@@ -211,4 +270,6 @@ module.exports = {
     addRebuy,
     getGameRebuys,
     getGameRebuyHistory,
+    finishGame,
+    getGameResults,
 };

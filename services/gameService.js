@@ -327,6 +327,98 @@ async function getGameRebuyHistory(gameId) {
     return result.rows;
 }
 
+/* ============================================================
+   🏁 Finish game + save final results
+============================================================ */
+async function finishGame({ gameId, results, durationSeconds }) {
+    const client = await pool.connect();
+
+    try {
+        await client.query("BEGIN");
+
+        /* 1️⃣ Validate game status */
+        const gameCheck = await client.query(
+            `SELECT status FROM games WHERE id = $1`,
+            [gameId]
+        );
+
+        if (gameCheck.rows.length === 0) {
+            throw new Error("Game not found");
+        }
+
+        if (gameCheck.rows[0].status === "finished") {
+            throw new Error("Game already finished");
+        }
+
+        /* 2️⃣ Insert final results */
+        for (const r of results) {
+            await client.query(
+                `
+                INSERT INTO game_results (
+                    game_id,
+                    user_id,
+                    money_in,
+                    money_out,
+                    profit
+                )
+                VALUES ($1, $2, $3, $4, $5)
+                `,
+                [
+                    gameId,
+                    r.userId,
+                    r.moneyIn,
+                    r.moneyOut,
+                    r.profit
+                ]
+            );
+        }
+
+        /* 3️⃣ Finalize game */
+        await client.query(
+            `
+            UPDATE games
+            SET status = 'finished',
+                finished_at = NOW(),
+                duration_seconds = $2
+            WHERE id = $1
+            `,
+            [gameId, durationSeconds]
+        );
+
+        await client.query("COMMIT");
+        return { success: true };
+
+    } catch (error) {
+        await client.query("ROLLBACK");
+        throw error;
+    } finally {
+        client.release();
+    }
+}
+
+/* ============================================================
+   📊 Get final game results
+============================================================ */
+async function getGameResults(gameId) {
+    const result = await pool.query(
+        `
+        SELECT
+            gr.user_id,
+            u.username,
+            gr.money_in,
+            gr.money_out,
+            gr.profit
+        FROM game_results gr
+        JOIN users u ON u.id = gr.user_id
+        WHERE gr.game_id = $1
+        ORDER BY gr.profit DESC
+        `,
+        [gameId]
+    );
+
+    return result.rows;
+}
+
 module.exports = {
     createGame,
     getGameSettings,
@@ -336,4 +428,6 @@ module.exports = {
     addRebuy,
     getGameRebuys,
     getGameRebuyHistory,
+    finishGame,
+    getGameResults,
 };
