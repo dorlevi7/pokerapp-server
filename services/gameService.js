@@ -174,7 +174,9 @@ async function updateGameStatus(gameId, status) {
 ============================================================ */
 async function getGameById(gameId) {
 
-    // 1️⃣ Game + settings
+    /* ============================================================
+       1️⃣ Game + settings + timing fields
+    ============================================================ */
     const gameResult = await pool.query(
         `
         SELECT 
@@ -184,6 +186,11 @@ async function getGameById(gameId) {
             g.game_type,
             g.status,
             g.created_at,
+
+            -- ⭐ TIMER FIELDS (CRITICAL)
+            g.started_at,
+            g.finished_at,
+            g.duration_seconds,
 
             json_build_object(
                 'gameType', g.game_type,
@@ -196,7 +203,12 @@ async function getGameById(gameId) {
                 'minRebuy', gs.min_rebuy,
                 'maxRebuy', gs.max_rebuy,
                 'rebuyPercent', gs.rebuy_percent,
-                'maxRebuysAllowed', gs.max_rebuys_allowed
+                'maxRebuysAllowed', gs.max_rebuys_allowed,
+                'startingChips', gs.starting_chips,
+                'levelDuration', gs.level_duration,
+                'startingSB', gs.starting_sb,
+                'startingBB', gs.starting_bb,
+                'notes', gs.notes
             ) AS settings
         FROM games g
         LEFT JOIN game_settings gs ON gs.game_id = g.id
@@ -210,7 +222,9 @@ async function getGameById(gameId) {
         return null;
     }
 
-    // 2️⃣ Players
+    /* ============================================================
+       2️⃣ Players
+    ============================================================ */
     const playersResult = await pool.query(
         `
         SELECT 
@@ -226,7 +240,9 @@ async function getGameById(gameId) {
         [gameId]
     );
 
-    // 3️⃣ Rebuys (aggregated)
+    /* ============================================================
+       3️⃣ Rebuys (aggregated per player)
+    ============================================================ */
     const rebuysResult = await pool.query(
         `
         SELECT 
@@ -240,6 +256,9 @@ async function getGameById(gameId) {
         [gameId]
     );
 
+    /* ============================================================
+       4️⃣ Final response
+    ============================================================ */
     return {
         ...gameResult.rows[0],
         players: playersResult.rows,
