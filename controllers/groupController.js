@@ -16,7 +16,7 @@ async function createGroup(req, res) {
         const group = await groupService.createGroup({
             name,
             ownerId,
-            memberIds, // invitations will use this, but members won't be auto-added
+            memberIds,
         });
 
         res.status(201).json({
@@ -29,7 +29,7 @@ async function createGroup(req, res) {
     }
 }
 
-// 📄 POST /api/groups/my-groups (TEMP)
+// 📄 POST /api/groups/my-groups
 async function getUserGroups(req, res) {
     try {
         const { userId } = req.body;
@@ -70,7 +70,24 @@ async function getGroupMembers(req, res) {
     }
 }
 
-// 🟢 NEW: Player accepts invitation → joins the group
+// 🎮 NEW: GET /api/groups/:groupId/games
+async function getGroupGames(req, res) {
+    try {
+        const { groupId } = req.params;
+
+        const games = await groupService.getGroupGames(groupId);
+
+        res.json({
+            success: true,
+            data: games,
+        });
+    } catch (error) {
+        console.error("❌ Error fetching group games:", error);
+        res.status(500).json({ success: false, error: "Server error" });
+    }
+}
+
+// 🟢 Player accepts invitation → joins the group
 async function joinGroup(req, res) {
     try {
         const { groupId } = req.params;
@@ -100,5 +117,6 @@ module.exports = {
     createGroup,
     getUserGroups,
     getGroupMembers,
-    joinGroup, // ⭐ ADDED
+    getGroupGames, // 🆕 חשוב
+    joinGroup,
 };

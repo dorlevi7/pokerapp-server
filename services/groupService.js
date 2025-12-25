@@ -131,10 +131,39 @@ async function addUserToGroup(groupId, userId) {
     }
 }
 
+// 🎮 Get all games for a specific group
+async function getGroupGames(groupId) {
+    try {
+        const result = await pool.query(
+            `
+            SELECT 
+                id,
+                group_id,
+                game_type,
+                status,
+                created_at,
+                started_at,
+                finished_at,
+                duration_seconds
+            FROM games
+            WHERE group_id = $1
+            ORDER BY created_at DESC
+            `,
+            [groupId]
+        );
+
+        return result.rows;
+    } catch (error) {
+        console.error("❌ Error fetching group games:", error);
+        throw error;
+    }
+}
+
 module.exports = {
     createGroup,
     getGroupsByUser,
     getGroupsForUser: getGroupsByUser,
     getGroupMembers,
-    addUserToGroup, // ⭐ ADDED
+    addUserToGroup,
+    getGroupGames,
 };
