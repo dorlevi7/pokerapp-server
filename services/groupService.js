@@ -136,18 +136,25 @@ async function getGroupGames(groupId) {
     try {
         const result = await pool.query(
             `
-            SELECT 
-                id,
-                group_id,
-                game_type,
-                status,
-                created_at,
-                started_at,
-                finished_at,
-                duration_seconds
-            FROM games
-            WHERE group_id = $1
-            ORDER BY created_at DESC
+SELECT
+    id,
+    group_id,
+    game_type,
+    status,
+    created_at,
+    started_at,
+    finished_at,
+    duration_seconds,
+
+    ROW_NUMBER() OVER (
+        PARTITION BY group_id
+        ORDER BY created_at ASC
+    ) AS game_number
+
+FROM games
+WHERE group_id = $1
+ORDER BY created_at DESC
+
             `,
             [groupId]
         );
