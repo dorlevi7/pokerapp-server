@@ -161,6 +161,44 @@ async function updateGameStatus(gameId, status) {
         throw new Error("Invalid game status");
     }
 
+    // Start game
+    if (status === "active") {
+        const result = await pool.query(
+            `
+            UPDATE games
+            SET 
+                status = 'active',
+                started_at = NOW(),
+                finished_at = NULL,
+                duration_seconds = NULL
+            WHERE id = $1
+            RETURNING id, status, started_at
+            `,
+            [gameId]
+        );
+
+        return result.rows[0];
+    }
+
+    // Finish game
+    if (status === "finished") {
+        const result = await pool.query(
+            `
+            UPDATE games
+            SET 
+                status = 'finished',
+                finished_at = NOW(),
+                duration_seconds = EXTRACT(EPOCH FROM (NOW() - started_at))
+            WHERE id = $1
+            RETURNING id, status, started_at, finished_at, duration_seconds
+            `,
+            [gameId]
+        );
+
+        return result.rows[0];
+    }
+
+    // Fallback (should not really happen)
     const result = await pool.query(
         `
         UPDATE games
@@ -233,10 +271,31 @@ async function getGameById(gameId) {
     return result.rows[0] || null;
 }
 
+/* ============================================================
+   💰 Add rebuy
+   ============================================================ */
+async function addRebuy({ gameId, userId, amount }) {
+    const result = await pool.query(
+        `
+        INSERT INTO game_rebuys (
+            game_id,
+            user_id,
+            amount
+        )
+        VALUES ($1, $2, $3)
+        RETURNING id, game_id, user_id, amount, created_at
+        `,
+        [gameId, userId, amount]
+    );
+
+    return result.rows[0];
+}
+
 module.exports = {
     createGame,
     getGameSettings,
     getGamePlayers,
     updateGameStatus,
     getGameById,
+    addRebuy,
 };

@@ -134,10 +134,46 @@ async function getGameById(req, res) {
     }
 }
 
+/* ============================================================
+   💰 POST /api/games/:gameId/rebuy
+   שמירת ריבאיי לשחקן
+   ============================================================ */
+async function addRebuy(req, res) {
+    try {
+        const { gameId } = req.params;
+        const { userId, amount } = req.body;
+
+        if (!userId || !amount) {
+            return res.status(400).json({
+                success: false,
+                error: "userId and amount are required",
+            });
+        }
+
+        const rebuy = await gameService.addRebuy({
+            gameId,
+            userId,
+            amount
+        });
+
+        return res.status(201).json({
+            success: true,
+            data: rebuy
+        });
+    } catch (error) {
+        console.error("❌ Error adding rebuy:", error);
+        return res.status(500).json({
+            success: false,
+            error: "Server error adding rebuy"
+        });
+    }
+}
+
 module.exports = {
     createGame,
     getGameSettings,
     getGamePlayers,
     updateGameStatus,
     getGameById,
+    addRebuy,
 };

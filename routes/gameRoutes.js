@@ -5,7 +5,8 @@ const {
    getGameSettings,
    getGamePlayers,
    updateGameStatus,
-   getGameById
+   getGameById,
+   addRebuy            // 🆕 חדש
 } = require("../controllers/gameController");
 
 const router = express.Router();
@@ -14,6 +15,12 @@ const router = express.Router();
    🟢 יצירת משחק חדש
 ============================================================ */
 router.post("/create", createGame);
+
+/* ============================================================
+   🟦 ריבאיי למשחק
+   POST /api/games/:gameId/rebuy
+============================================================ */
+router.post("/:gameId/rebuy", addRebuy); // 🆕 חדש
 
 /* ============================================================
    🟦 חשוב! מסלולים ספציפיים לפני הכלליים
