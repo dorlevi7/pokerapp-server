@@ -305,8 +305,6 @@ async function getGameRebuyHistory(gameId) {
         [gameId]
     );
 
-    console.log("📜 Rebuy history from DB:", result.rows);
-
     return result.rows;
 }
 
