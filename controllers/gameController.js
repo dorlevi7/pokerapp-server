@@ -179,6 +179,29 @@ async function getGameRebuys(req, res) {
     }
 }
 
+/* ============================================================
+   📜 GET /api/games/:gameId/rebuys/history
+   פירוט מלא של כל ריבאיי
+============================================================ */
+async function getGameRebuyHistory(req, res) {
+    try {
+        const { gameId } = req.params;
+
+        const history = await gameService.getGameRebuyHistory(gameId);
+
+        return res.json({
+            success: true,
+            data: history
+        });
+    } catch (error) {
+        console.error("❌ Error fetching rebuy history:", error);
+        return res.status(500).json({
+            success: false,
+            error: "Server error fetching rebuy history"
+        });
+    }
+}
+
 module.exports = {
     createGame,
     getGameSettings,
@@ -186,5 +209,6 @@ module.exports = {
     updateGameStatus,
     getGameById,
     addRebuy,
-    getGameRebuys,   // 🆕 חשוב!
+    getGameRebuys,
+    getGameRebuyHistory,
 };

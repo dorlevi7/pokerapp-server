@@ -7,7 +7,8 @@ const {
    updateGameStatus,
    getGameById,
    addRebuy,
-   getGameRebuys        // 🆕 חדש
+   getGameRebuys,
+   getGameRebuyHistory,
 } = require("../controllers/gameController");
 
 const router = express.Router();
@@ -45,5 +46,11 @@ router.get("/:gameId", getGameById);
    🔄 שינוי סטטוס משחק
 ============================================================ */
 router.post("/:gameId/status", updateGameStatus);
+
+/* ============================================================
+   🟦 היסטוריית ריבאיים (פירוט מלא)
+   GET /api/games/:gameId/rebuys/history
+============================================================ */
+router.get("/:gameId/rebuys/history", getGameRebuyHistory);
 
 module.exports = router;

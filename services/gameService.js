@@ -282,6 +282,34 @@ async function getGameRebuys(gameId) {
     return result.rows;
 }
 
+/* ============================================================
+   📜 Get rebuy history (detailed)
+============================================================ */
+async function getGameRebuyHistory(gameId) {
+    const result = await pool.query(
+        `
+        SELECT
+            gr.id,
+            gr.user_id,
+            u.username,
+            gr.amount,
+            gr.created_at,
+            EXTRACT(EPOCH FROM (gr.created_at - g.started_at))::int
+                AS seconds_from_start
+        FROM game_rebuys gr
+        JOIN users u ON u.id = gr.user_id
+        JOIN games g ON g.id = gr.game_id
+        WHERE gr.game_id = $1
+        ORDER BY gr.created_at ASC
+        `,
+        [gameId]
+    );
+
+    console.log("📜 Rebuy history from DB:", result.rows);
+
+    return result.rows;
+}
+
 module.exports = {
     createGame,
     getGameSettings,
@@ -289,5 +317,6 @@ module.exports = {
     updateGameStatus,
     getGameById,
     addRebuy,
-    getGameRebuys, // ⭐ חשוב לתצוגה
+    getGameRebuys,
+    getGameRebuyHistory,
 };
