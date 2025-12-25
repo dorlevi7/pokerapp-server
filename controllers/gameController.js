@@ -2,16 +2,10 @@ const gameService = require("../services/gameService");
 
 /* ============================================================
    🟢 POST /api/games/create
-   יצירת משחק חדש + שמירת קונפיגורציות + שחקנים
-   ============================================================ */
+============================================================ */
 async function createGame(req, res) {
     try {
-        const {
-            groupId,
-            createdBy,
-            playerIds,
-            settings
-        } = req.body;
+        const { groupId, createdBy, playerIds, settings } = req.body;
 
         if (!groupId || !createdBy || !Array.isArray(playerIds)) {
             return res.status(400).json({
@@ -31,7 +25,6 @@ async function createGame(req, res) {
             success: true,
             data: game,
         });
-
     } catch (error) {
         console.error("❌ Error creating game:", error);
         return res.status(500).json({ success: false, error: error.message });
@@ -40,16 +33,13 @@ async function createGame(req, res) {
 
 /* ============================================================
    📄 GET /api/games/:gameId/settings
-   ============================================================ */
+============================================================ */
 async function getGameSettings(req, res) {
     try {
         const { gameId } = req.params;
         const settings = await gameService.getGameSettings(gameId);
 
-        res.json({
-            success: true,
-            data: settings,
-        });
+        res.json({ success: true, data: settings });
     } catch (error) {
         console.error("❌ Error fetching game settings:", error);
         res.status(500).json({ success: false, error: "Server error" });
@@ -58,16 +48,13 @@ async function getGameSettings(req, res) {
 
 /* ============================================================
    👥 GET /api/games/:gameId/players
-   ============================================================ */
+============================================================ */
 async function getGamePlayers(req, res) {
     try {
         const { gameId } = req.params;
         const players = await gameService.getGamePlayers(gameId);
 
-        res.json({
-            success: true,
-            data: players,
-        });
+        res.json({ success: true, data: players });
     } catch (error) {
         console.error("❌ Error fetching game players:", error);
         res.status(500).json({ success: false, error: "Server error" });
@@ -76,7 +63,7 @@ async function getGamePlayers(req, res) {
 
 /* ============================================================
    🔄 POST /api/games/:gameId/status
-   ============================================================ */
+============================================================ */
 async function updateGameStatus(req, res) {
     try {
         const { gameId } = req.params;
@@ -104,8 +91,7 @@ async function updateGameStatus(req, res) {
 
 /* ============================================================
    📄 GET /api/games/:gameId
-   מחזיר את כל המידע על המשחק
-   ============================================================ */
+============================================================ */
 async function getGameById(req, res) {
     try {
         const { gameId } = req.params;
@@ -122,9 +108,11 @@ async function getGameById(req, res) {
             success: true,
             data: {
                 game,
-                players: game.players || []
+                players: game.players || [],
+                rebuys: game.rebuys || []   // ⭐ זה כל הסיפור
             }
         });
+
     } catch (err) {
         console.error("❌ Error in getGameById:", err);
         return res.status(500).json({
@@ -136,8 +124,7 @@ async function getGameById(req, res) {
 
 /* ============================================================
    💰 POST /api/games/:gameId/rebuy
-   שמירת ריבאיי לשחקן
-   ============================================================ */
+============================================================ */
 async function addRebuy(req, res) {
     try {
         const { gameId } = req.params;
@@ -169,6 +156,29 @@ async function addRebuy(req, res) {
     }
 }
 
+/* ============================================================
+   💰 GET /api/games/:gameId/rebuys
+   קריאת ריבאיים מה־DB
+============================================================ */
+async function getGameRebuys(req, res) {
+    try {
+        const { gameId } = req.params;
+
+        const rebuys = await gameService.getGameRebuys(gameId);
+
+        return res.json({
+            success: true,
+            data: rebuys
+        });
+    } catch (error) {
+        console.error("❌ Error fetching rebuys:", error);
+        return res.status(500).json({
+            success: false,
+            error: "Server error fetching rebuys"
+        });
+    }
+}
+
 module.exports = {
     createGame,
     getGameSettings,
@@ -176,4 +186,5 @@ module.exports = {
     updateGameStatus,
     getGameById,
     addRebuy,
+    getGameRebuys,   // 🆕 חשוב!
 };

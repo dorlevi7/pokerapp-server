@@ -1,19 +1,15 @@
-// server/services/gameService.js
 const pool = require("../db");
 
 /* ============================================================
-   🟢 Create a new game  
-   מקבל settings כאובייקט אחד — בדיוק כמו שהלקוח שולח
-   ============================================================ */
+   🟢 Create a new game
+============================================================ */
 async function createGame({ groupId, createdBy, settings, playerIds }) {
     const client = await pool.connect();
 
     try {
         await client.query("BEGIN");
 
-        /* --------------------------------------------------------
-           1️⃣ יצירת רשומה בטבלת games
-        -------------------------------------------------------- */
+        /* 1️⃣ Create game */
         const gameResult = await client.query(
             `
             INSERT INTO games (group_id, created_by, game_type, status)
@@ -25,9 +21,7 @@ async function createGame({ groupId, createdBy, settings, playerIds }) {
 
         const gameId = gameResult.rows[0].id;
 
-        /* --------------------------------------------------------
-           2️⃣ שמירת קונפיגורציה בטבלת game_settings
-        -------------------------------------------------------- */
+        /* 2️⃣ Save settings */
         await client.query(
             `
             INSERT INTO game_settings (
@@ -59,59 +53,44 @@ async function createGame({ groupId, createdBy, settings, playerIds }) {
                 gameId,
                 settings.currency,
                 settings.buyIn,
-
                 settings.cashSB || null,
                 settings.cashBB || null,
-
                 settings.allowRebuy,
                 settings.rebuyType,
                 settings.minRebuy || null,
                 settings.maxRebuy || null,
-
                 settings.rebuyPercent || null,
                 settings.maxRebuysAllowed || null,
-
                 settings.startingChips || null,
                 settings.levelDuration || null,
-
                 settings.startingSB || null,
                 settings.startingBB || null,
-
                 settings.enableLateReg,
                 settings.lateRegType || null,
                 settings.lateRegMinutes || null,
                 settings.lateRegLevel || null,
-
                 settings.allowStraddle || false,
                 settings.allowRunItTwice || false,
-
                 settings.notes || ""
             ]
         );
 
-        /* --------------------------------------------------------
-           3️⃣ שמירת שחקנים בטבלת game_players
-        -------------------------------------------------------- */
+        /* 3️⃣ Save players */
         for (const userId of playerIds) {
             await client.query(
                 `
                 INSERT INTO game_players (game_id, user_id, starting_stack)
                 VALUES ($1, $2, $3)
                 `,
-                [
-                    gameId,
-                    userId,
-                    settings.startingChips || null
-                ]
+                [gameId, userId, settings.startingChips || null]
             );
         }
 
         await client.query("COMMIT");
-
         return { gameId };
+
     } catch (error) {
         await client.query("ROLLBACK");
-        console.error("❌ Error creating game:", error);
         throw error;
     } finally {
         client.release();
@@ -119,24 +98,19 @@ async function createGame({ groupId, createdBy, settings, playerIds }) {
 }
 
 /* ============================================================
-   📄 קבלת קונפיגורציה
-   ============================================================ */
+   📄 Get game settings
+============================================================ */
 async function getGameSettings(gameId) {
     const result = await pool.query(
-        `
-        SELECT *
-        FROM game_settings
-        WHERE game_id = $1
-        `,
+        `SELECT * FROM game_settings WHERE game_id = $1`,
         [gameId]
     );
-
     return result.rows[0] || null;
 }
 
 /* ============================================================
-   👥 קבלת שחקני המשחק
-   ============================================================ */
+   👥 Get game players
+============================================================ */
 async function getGamePlayers(gameId) {
     const result = await pool.query(
         `
@@ -148,72 +122,61 @@ async function getGamePlayers(gameId) {
         `,
         [gameId]
     );
-
     return result.rows;
 }
 
 /* ============================================================
-   🔄 עדכון סטטוס משחק
-   ============================================================ */
+   🔄 Update game status
+============================================================ */
 async function updateGameStatus(gameId, status) {
     const allowed = ["pending", "active", "finished"];
     if (!allowed.includes(status)) {
         throw new Error("Invalid game status");
     }
 
-    // Start game
     if (status === "active") {
         const result = await pool.query(
             `
             UPDATE games
-            SET 
-                status = 'active',
+            SET status = 'active',
                 started_at = NOW(),
                 finished_at = NULL,
                 duration_seconds = NULL
             WHERE id = $1
-            RETURNING id, status, started_at
+            RETURNING *
             `,
             [gameId]
         );
-
         return result.rows[0];
     }
 
-    // Finish game
     if (status === "finished") {
         const result = await pool.query(
             `
             UPDATE games
-            SET 
-                status = 'finished',
+            SET status = 'finished',
                 finished_at = NOW(),
                 duration_seconds = EXTRACT(EPOCH FROM (NOW() - started_at))
             WHERE id = $1
-            RETURNING id, status, started_at, finished_at, duration_seconds
+            RETURNING *
             `,
             [gameId]
         );
-
         return result.rows[0];
     }
-
-    // Fallback (should not really happen)
-    const result = await pool.query(
-        `
-        UPDATE games
-        SET status = $2
-        WHERE id = $1
-        RETURNING id, status
-        `,
-        [gameId, status]
-    );
-
-    return result.rows[0];
 }
 
+/* ============================================================
+   📄 Get full game (players + settings)
+============================================================ */
+/* ============================================================
+   📄 Get full game (players + settings + rebuys)
+============================================================ */
 async function getGameById(gameId) {
-    const query = `
+
+    // 1️⃣ Game + settings
+    const gameResult = await pool.query(
+        `
         SELECT 
             g.id,
             g.group_id,
@@ -233,62 +196,90 @@ async function getGameById(gameId) {
                 'minRebuy', gs.min_rebuy,
                 'maxRebuy', gs.max_rebuy,
                 'rebuyPercent', gs.rebuy_percent,
-                'maxRebuysAllowed', gs.max_rebuys_allowed,
-                'startingChips', gs.starting_chips,
-                'levelDuration', gs.level_duration,
-                'startingSB', gs.starting_sb,
-                'startingBB', gs.starting_bb,
-                'enableLateReg', gs.enable_late_reg,
-                'lateRegType', gs.late_reg_type,
-                'lateRegMinutes', gs.late_reg_minutes,
-                'lateRegLevel', gs.late_reg_level,
-                'allowStraddle', gs.allow_straddle,
-                'allowRunItTwice', gs.allow_run_it_twice,
-                'notes', gs.notes
-            ) AS settings,
-
-            COALESCE(
-                json_agg(
-                    json_build_object(
-                        'id', u.id,
-                        'username', u.username,
-                        'firstName', u.first_name,
-                        'lastName', u.last_name
-                    )
-                ) FILTER (WHERE u.id IS NOT NULL),
-                '[]'
-            ) AS players
-
+                'maxRebuysAllowed', gs.max_rebuys_allowed
+            ) AS settings
         FROM games g
         LEFT JOIN game_settings gs ON gs.game_id = g.id
-        LEFT JOIN game_players gp ON gp.game_id = g.id
-        LEFT JOIN users u ON u.id = gp.user_id
         WHERE g.id = $1
-        GROUP BY g.id, gs.id
-    `;
+        `,
+        [gameId]
+    );
 
-    const result = await pool.query(query, [gameId]);
-    return result.rows[0] || null;
+    if (gameResult.rows.length === 0) {
+        console.log("❌ Game not found:", gameId);
+        return null;
+    }
+
+    // 2️⃣ Players
+    const playersResult = await pool.query(
+        `
+        SELECT 
+            u.id,
+            u.username,
+            u.first_name AS "firstName",
+            u.last_name AS "lastName"
+        FROM game_players gp
+        JOIN users u ON u.id = gp.user_id
+        WHERE gp.game_id = $1
+        ORDER BY u.username
+        `,
+        [gameId]
+    );
+
+    // 3️⃣ Rebuys (aggregated)
+    const rebuysResult = await pool.query(
+        `
+        SELECT 
+            user_id,
+            COUNT(*)::int AS count,
+            COALESCE(SUM(amount), 0)::int AS total
+        FROM game_rebuys
+        WHERE game_id = $1
+        GROUP BY user_id
+        `,
+        [gameId]
+    );
+
+    return {
+        ...gameResult.rows[0],
+        players: playersResult.rows,
+        rebuys: rebuysResult.rows
+    };
 }
 
 /* ============================================================
    💰 Add rebuy
-   ============================================================ */
+============================================================ */
 async function addRebuy({ gameId, userId, amount }) {
     const result = await pool.query(
         `
-        INSERT INTO game_rebuys (
-            game_id,
-            user_id,
-            amount
-        )
+        INSERT INTO game_rebuys (game_id, user_id, amount)
         VALUES ($1, $2, $3)
-        RETURNING id, game_id, user_id, amount, created_at
+        RETURNING *
         `,
         [gameId, userId, amount]
     );
-
     return result.rows[0];
+}
+
+/* ============================================================
+   💰 Get rebuys (aggregated per player)
+============================================================ */
+async function getGameRebuys(gameId) {
+    const result = await pool.query(
+        `
+        SELECT 
+            user_id,
+            COUNT(*) AS rebuy_count,
+            SUM(amount) AS total_amount
+        FROM game_rebuys
+        WHERE game_id = $1
+        GROUP BY user_id
+        `,
+        [gameId]
+    );
+
+    return result.rows;
 }
 
 module.exports = {
@@ -298,4 +289,5 @@ module.exports = {
     updateGameStatus,
     getGameById,
     addRebuy,
+    getGameRebuys, // ⭐ חשוב לתצוגה
 };
